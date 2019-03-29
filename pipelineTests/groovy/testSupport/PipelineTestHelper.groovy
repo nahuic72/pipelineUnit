@@ -187,12 +187,22 @@ class PipelineTestHelper extends BasePipelineTest {
             switch (section) {
                 case 'always':
                 case 'changed': // How to handle changed? It may happen so just run it..
+                case 'cleanup':
                     return c.call()
                     break
                 case 'success':
+                case 'fixed':
                     if(currentBuild.result == 'SUCCESS') { return c.call() }
                     else { println "post ${section} skipped as not SUCCESS"; return null}
                     break
+                case 'regression':
+                    if(currentBuild.result == 'UNSTABLE' ||
+                            currentBuild.result == 'FAILURE' ||
+                            currentBuild.result == 'ABORTED') { return c.call() }
+                    else { println "post ${section} skipped as not UNSTABLE, FAILURE or ABORTED"; return null}
+                case 'unsuccessful':
+                    if(currentBuild.result != 'SUCCESS') { return c.call() }
+                    else { println "post ${section} skipped as SUCCESS"; return null}
                 case 'unstable':
                     if(currentBuild.result == 'UNSTABLE') { return c.call() }
                     else { println "post ${section} skipped as SUCCESS"; return null}
@@ -212,9 +222,14 @@ class PipelineTestHelper extends BasePipelineTest {
         }
         helper.registerAllowedMethod('always', [Closure.class], postResultEmulator.curry('always'))
         helper.registerAllowedMethod('changed', [Closure.class], postResultEmulator.curry('changed'))
+        helper.registerAllowedMethod('fixed', [Closure.class], postResultEmulator.curry('fixed'))
+        helper.registerAllowedMethod('regression', [Closure.class], postResultEmulator.curry('regression'))
+        helper.registerAllowedMethod('aborted', [Closure.class], postResultEmulator.curry('aborted'))
+        helper.registerAllowedMethod('failure', [Closure.class], postResultEmulator.curry('failure'))
         helper.registerAllowedMethod('success', [Closure.class], postResultEmulator.curry('success'))
         helper.registerAllowedMethod('unstable', [Closure.class], postResultEmulator.curry('unstable'))
-        helper.registerAllowedMethod('failure', [Closure.class], postResultEmulator.curry('failure'))
+        helper.registerAllowedMethod('unsuccessful', [Closure.class], postResultEmulator.curry('unsuccessful'))
+        helper.registerAllowedMethod('cleanup', [Closure.class], postResultEmulator.curry('cleanup'))
     }
 
     /**
