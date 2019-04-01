@@ -86,7 +86,7 @@ class JenkinsfileTestSpec extends PipelineSpockTestBase {
     }
 
     @Unroll
-    def "Jenkinsfile cover all build results for post sections - #RESULT"() {
+    def "Jenkinsfile cover all build results for post sections - #SCENARIO"() {
 
         given:
         helper.registerAllowedMethod('validateDeclarativePipeline', [String.class], { true } )
@@ -97,6 +97,7 @@ class JenkinsfileTestSpec extends PipelineSpockTestBase {
 
         and:
         binding.getVariable('currentBuild').result = RESULT
+        binding.getVariable('currentBuild').previousBuild.result = PREVIOUS
 
         when:
         runScript('Jenkinsfile')
@@ -105,10 +106,17 @@ class JenkinsfileTestSpec extends PipelineSpockTestBase {
         printCallStack()
 
         where:
-        RESULT      | NONE
-        'SUCCESS'   | _
-        'FAILURE'   | _
-        'ABORTED'   | _
-        'UNSTABLE'  | _
+        RESULT      | PREVIOUS      | SCENARIO
+        'SUCCESS'   | 'SUCCESS'     | 'SUCCESS'
+        'FAILURE'   | 'SUCCESS'     | 'REGRESSION FAILURE'
+        'UNSTABLE'  | 'SUCCESS'     | 'REGRESSION UNSTABLE'
+        'ABORTED'   | 'SUCCESS'     | 'REGRESSION ABORTED'
+        'FAILURE'   | 'FAILURE'     | 'FAILURE'
+        'FAILURE'   | 'UNSTABLE'    | 'CHANGED'
+        'ABORTED'   | 'ABORTED'     | 'ABORTED'
+        'UNSTABLE'  | 'UNSTABLE'    | 'UNSTABLE'
+        'SUCCESS'   | 'UNSTABLE'    | 'FIXED UNSTABLE'
+        'SUCCESS'   | 'FAILED'      | 'FIXED FAILED'
+        'FAILURE'   | 'ABORTED'     | 'UNSUCCESSFUL'
     }
 }

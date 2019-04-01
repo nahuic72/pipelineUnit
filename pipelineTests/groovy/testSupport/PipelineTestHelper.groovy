@@ -183,26 +183,38 @@ class PipelineTestHelper extends BasePipelineTest {
         def postResultEmulator = { String section, Closure c ->
 
             def currentBuild = binding.getVariable('currentBuild')
+            def previousBuild = binding.getVariable('currentBuild').previousBuild
 
             switch (section) {
                 case 'always':
-                case 'changed': // How to handle changed? It may happen so just run it..
                 case 'cleanup':
                     return c.call()
                     break
-                case 'success':
+                case 'changed':
+                    if(currentBuild.result != previousBuild.result) { return c.call() }
+                    else { println "post ${section} skipped as not CHANGED"; return null}
+                    break
                 case 'fixed':
+                    if(currentBuild.result == 'SUCCESS' &&
+                            (previousBuild.result == 'FAILED' ||
+                             previousBuild.result == 'UNSTABLE')) { return c.call() }
+                    else { println "post ${section} skipped as not FIXED"; return null}
+                    break
+                case 'success':
                     if(currentBuild.result == 'SUCCESS') { return c.call() }
                     else { println "post ${section} skipped as not SUCCESS"; return null}
                     break
                 case 'regression':
-                    if(currentBuild.result == 'UNSTABLE' ||
-                            currentBuild.result == 'FAILURE' ||
-                            currentBuild.result == 'ABORTED') { return c.call() }
-                    else { println "post ${section} skipped as not UNSTABLE, FAILURE or ABORTED"; return null}
+                    if(previousBuild.result == 'SUCCESS' &&
+                            (currentBuild.result == 'UNSTABLE' ||
+                             currentBuild.result == 'FAILURE' ||
+                             currentBuild.result == 'ABORTED')) { return c.call() }
+                    else { println "post ${section} skipped as not UNSTABLE, FAILURE or ABORTED after SUCCESS"; return null}
+                    break
                 case 'unsuccessful':
                     if(currentBuild.result != 'SUCCESS') { return c.call() }
                     else { println "post ${section} skipped as SUCCESS"; return null}
+                    break
                 case 'unstable':
                     if(currentBuild.result == 'UNSTABLE') { return c.call() }
                     else { println "post ${section} skipped as SUCCESS"; return null}
@@ -287,8 +299,10 @@ class PipelineTestHelper extends BasePipelineTest {
 
         /**
          * The currentBuild in the job
+         * Includes a previous build which finished successfully
          */
-        binding.setVariable('currentBuild', new Expando(result: 'SUCCESS', displayName: 'Build #1234'))
+        def previous = new Expando(result: 'SUCCESS', displayName: 'Build #1233')
+        binding.setVariable('currentBuild', new Expando(result: 'SUCCESS', displayName: 'Build #1234', previousBuild: previous))
 
         /**
          * agent any
