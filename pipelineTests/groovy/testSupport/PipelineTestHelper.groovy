@@ -131,8 +131,42 @@ class PipelineTestHelper extends BasePipelineTest {
                     return expressionResult
                 })
 
+                // Handle a when branch
+                helper.registerAllowedMethod('branch', [String.class], { String input ->
+
+                    String branchPattern = convertPatternToRegex(input)
+                    def patternResult = (binding.getVariable('BRANCH_NAME') ==~ /${branchPattern}/)
+                    if(patternResult == false) {
+                        throw new WhenExitException("Stage '${stgName}' skipped due to when branch is false")
+                    }
+                    return patternResult
+                })
+
+                // Handle a when buildingTag
+                helper.registerAllowedMethod('buildingTag', [], {
+
+                    String tagName = binding.getVariable('TAG_NAME')
+                    if(tagName == null || tagName == '' ) {
+                        throw new WhenExitException("Stage '${stgName}' skipped due to not building a tag")
+                    }
+                    return true
+                })
+
+                // Handle a when tag
+                helper.registerAllowedMethod('tag', [String.class], { String input ->
+
+                    String tagPattern = convertPatternToRegex(input)
+                    String tagName = binding.getVariable('TAG_NAME')
+                    if(tagName != null && tagName != '' ) {
+                        def patternResult = (tagName ==~ /${tagPattern}/)
+                        if (patternResult == true) {
+                            return true
+                        }
+                    }
+                    throw new WhenExitException("Stage '${stgName}' skipped due to no building a specific tag")
+                })
+
                 // TODO - handle other when clauses in the when
-                // branch : 'when { branch 'master' }'
                 // environment : 'when { environment name: 'DEPLOY_TO', value: 'production' }'
 
                 // Run the when body and return any result
@@ -293,6 +327,12 @@ class PipelineTestHelper extends BasePipelineTest {
         binding.setVariable('PATH', '/some/path')
 
         /**
+         * BRANCH_NAME && TAG_NAME
+         */
+        binding.setVariable('BRANCH_NAME', 'master')
+        binding.setVariable('TAG_NAME', null)
+
+        /**
          * Initialize a basic Env passed in from Jenkins - may need to override in specific tests
          */
         addEnvVar('BUILD_NUMBER', '1234')
@@ -332,5 +372,12 @@ class PipelineTestHelper extends BasePipelineTest {
         }
         def env = binding.getVariable('env') as Expando
         env[name] = val
+    }
+
+    /**
+     * Helper for turning a GLOB-style matcher into a java Matcher
+     */
+    def convertPatternToRegex(String pattern) {
+        return pattern.replaceAll('\\*', '.*')
     }
 }

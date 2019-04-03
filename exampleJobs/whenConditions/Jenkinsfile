@@ -1,0 +1,38 @@
+/**
+ * Declarative pipeline
+ */
+pipeline {
+
+    agent none
+
+    stages {
+
+        stage('When branch') {
+            when {
+                branch 'master'
+            }
+            steps {
+                echo "This step is run when the branch is 'master'."
+            }
+        }
+
+        stage('When buildingTag') {
+            when {
+                buildingTag()
+            }
+            steps {
+                echo "This step is run when run from a tag."
+            }
+        }
+
+        stage('When on a specific tag') {
+            when {
+                tag "release-*"
+            }
+            steps {
+                echo "This step is run when run from a specific tag."
+            }
+        }
+
+    }
+}
