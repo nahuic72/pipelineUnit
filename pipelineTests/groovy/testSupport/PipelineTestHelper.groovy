@@ -117,7 +117,7 @@ class PipelineTestHelper extends BasePipelineTest {
             // Returned from the stage
             def stageResult
 
-            // Handling of the when. Only supporting expression right now
+            // Handling of the when.
             helper.registerAllowedMethod('when', [Closure.class], { Closure whenBody ->
 
                 // Handle a when expression
@@ -166,6 +166,18 @@ class PipelineTestHelper extends BasePipelineTest {
                     throw new WhenExitException("Stage '${stgName}' skipped due to no building a specific tag")
                 })
 
+                // Handle a when beforeAgent
+                helper.registerAllowedMethod('beforeAgent', [Boolean.class], null )
+
+                // Handle a when beforeInput
+                helper.registerAllowedMethod('beforeInput', [Boolean.class], null )
+
+                // Handle the boolean when cases without actually checking them
+                helper.registerAllowedMethod('not', [Closure.class], null )
+                helper.registerAllowedMethod('allOf', [Closure.class], null )
+                helper.registerAllowedMethod('anyOf', [Closure.class], null )
+
+
                 // TODO - handle other when clauses in the when
                 // environment : 'when { environment name: 'DEPLOY_TO', value: 'production' }'
 
@@ -198,8 +210,16 @@ class PipelineTestHelper extends BasePipelineTest {
             }
 
             // Unregister
-            helper.unRegisterAllowedMethod('when', [Closure.class.class])
+            helper.unRegisterAllowedMethod('when', [Closure.class])
             helper.unRegisterAllowedMethod('expression', [Closure.class])
+            helper.unRegisterAllowedMethod('branch', [Closure.class])
+            helper.unRegisterAllowedMethod('buildingTag', [Closure.class])
+            helper.unRegisterAllowedMethod('tag', [Closure.class])
+            helper.unRegisterAllowedMethod('beforeAgent', [Closure.class])
+            helper.unRegisterAllowedMethod('beforeInput', [Closure.class])
+            helper.unRegisterAllowedMethod('not', [Closure.class])
+            helper.unRegisterAllowedMethod('allOf', [Closure.class])
+            helper.unRegisterAllowedMethod('anyOf', [Closure.class])
 
             return stageResult
         })

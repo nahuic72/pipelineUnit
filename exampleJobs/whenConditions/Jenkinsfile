@@ -9,6 +9,8 @@ pipeline {
 
         stage('When branch') {
             when {
+                beforeAgent true
+                beforeInput true
                 branch 'master'
             }
             steps {
@@ -31,6 +33,19 @@ pipeline {
             }
             steps {
                 echo "This step is run when run from a specific tag."
+            }
+        }
+
+        stage('When allOf expression') {
+            when {
+                allOf {
+                    expression {
+                        return true
+                    }
+                }
+            }
+            steps {
+                echo "This step is run when the expression is true."
             }
         }
 
