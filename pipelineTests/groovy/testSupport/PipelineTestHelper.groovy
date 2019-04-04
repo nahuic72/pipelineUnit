@@ -117,7 +117,7 @@ class PipelineTestHelper extends BasePipelineTest {
             // Returned from the stage
             def stageResult
 
-            // Handling of the when. Only supporting expression right now
+            // Handling of the when.
             helper.registerAllowedMethod('when', [Closure.class], { Closure whenBody ->
 
                 // Handle a when expression
@@ -131,8 +131,54 @@ class PipelineTestHelper extends BasePipelineTest {
                     return expressionResult
                 })
 
+                // Handle a when branch
+                helper.registerAllowedMethod('branch', [String.class], { String input ->
+
+                    String branchPattern = convertPatternToRegex(input)
+                    def patternResult = (binding.getVariable('BRANCH_NAME') ==~ /${branchPattern}/)
+                    if(patternResult == false) {
+                        throw new WhenExitException("Stage '${stgName}' skipped due to when branch is false")
+                    }
+                    return patternResult
+                })
+
+                // Handle a when buildingTag
+                helper.registerAllowedMethod('buildingTag', [], {
+
+                    String tagName = binding.getVariable('TAG_NAME')
+                    if(tagName == null || tagName == '' ) {
+                        throw new WhenExitException("Stage '${stgName}' skipped due to not building a tag")
+                    }
+                    return true
+                })
+
+                // Handle a when tag
+                helper.registerAllowedMethod('tag', [String.class], { String input ->
+
+                    String tagPattern = convertPatternToRegex(input)
+                    String tagName = binding.getVariable('TAG_NAME')
+                    if(tagName != null && tagName != '' ) {
+                        def patternResult = (tagName ==~ /${tagPattern}/)
+                        if (patternResult == true) {
+                            return true
+                        }
+                    }
+                    throw new WhenExitException("Stage '${stgName}' skipped due to no building a specific tag")
+                })
+
+                // Handle a when beforeAgent
+                helper.registerAllowedMethod('beforeAgent', [Boolean.class], null )
+
+                // Handle a when beforeInput
+                helper.registerAllowedMethod('beforeInput', [Boolean.class], null )
+
+                // Handle the boolean when cases without actually checking them
+                helper.registerAllowedMethod('not', [Closure.class], null )
+                helper.registerAllowedMethod('allOf', [Closure.class], null )
+                helper.registerAllowedMethod('anyOf', [Closure.class], null )
+
+
                 // TODO - handle other when clauses in the when
-                // branch : 'when { branch 'master' }'
                 // environment : 'when { environment name: 'DEPLOY_TO', value: 'production' }'
 
                 // Run the when body and return any result
@@ -164,8 +210,16 @@ class PipelineTestHelper extends BasePipelineTest {
             }
 
             // Unregister
-            helper.unRegisterAllowedMethod('when', [Closure.class.class])
+            helper.unRegisterAllowedMethod('when', [Closure.class])
             helper.unRegisterAllowedMethod('expression', [Closure.class])
+            helper.unRegisterAllowedMethod('branch', [Closure.class])
+            helper.unRegisterAllowedMethod('buildingTag', [Closure.class])
+            helper.unRegisterAllowedMethod('tag', [Closure.class])
+            helper.unRegisterAllowedMethod('beforeAgent', [Closure.class])
+            helper.unRegisterAllowedMethod('beforeInput', [Closure.class])
+            helper.unRegisterAllowedMethod('not', [Closure.class])
+            helper.unRegisterAllowedMethod('allOf', [Closure.class])
+            helper.unRegisterAllowedMethod('anyOf', [Closure.class])
 
             return stageResult
         })
@@ -322,6 +376,12 @@ class PipelineTestHelper extends BasePipelineTest {
         binding.setVariable('PATH', '/some/path')
 
         /**
+         * BRANCH_NAME && TAG_NAME
+         */
+        binding.setVariable('BRANCH_NAME', 'master')
+        binding.setVariable('TAG_NAME', null)
+
+        /**
          * Initialize a basic Env passed in from Jenkins - may need to override in specific tests
          */
         addEnvVar('BUILD_NUMBER', '1234')
@@ -361,5 +421,12 @@ class PipelineTestHelper extends BasePipelineTest {
         }
         def env = binding.getVariable('env') as Expando
         env[name] = val
+    }
+
+    /**
+     * Helper for turning a GLOB-style matcher into a java Matcher
+     */
+    def convertPatternToRegex(String pattern) {
+        return pattern.replaceAll('\\*', '.*')
     }
 }
