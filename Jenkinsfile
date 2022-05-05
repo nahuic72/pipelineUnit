@@ -78,7 +78,7 @@ pipeline {
                         echo "GRADLE_HOME=${env.GRADLE_HOME}"
                         echo "PATH=${env.PATH}"
 
-                        sh "gradle ${params.GRADLE_TASKS_OPTIONS}"
+                        bat "gradle ${params.GRADLE_TASKS_OPTIONS}"
                     }
                 }
             }
